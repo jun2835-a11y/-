@@ -29,9 +29,14 @@ SCHEMA = {
         "has_figure": {"type": "boolean", "description": "그림(도형·그래프) 포함 여부"},
         "figure_type": {"type": "string",
                         "description": "그림 종류: none / cylinder / graph / plane / other"},
+        "figure_bbox": {"type": "object", "additionalProperties": False,
+                        "properties": {"x0": {"type": "number"}, "y0": {"type": "number"},
+                                       "x1": {"type": "number"}, "y1": {"type": "number"}},
+                        "required": ["x0", "y0", "x1", "y1"],
+                        "description": "그림 영역 상대좌표(0~1, 좌상단 x0,y0 ~ 우하단 x1,y1). 없으면 모두 0"},
     },
     "required": ["qnum", "points", "stem", "choices", "intent",
-                 "solution", "answer", "has_figure", "figure_type"],
+                 "solution", "answer", "has_figure", "figure_type", "figure_bbox"],
 }
 
 PROMPT = (

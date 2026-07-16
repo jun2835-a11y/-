@@ -53,8 +53,7 @@
   .answer { margin-top:28px; text-align:right; font-size:17px; font-weight:700; }
   .figure { margin:22px 0; text-align:center; }
   .figure svg { max-width:100%; height:auto; }
-  .figflag { margin:16px 0 6px; font-size:12px; color:var(--muted); }
-  .orig { max-width:400px; width:100%; border:1px solid var(--line); border-radius:12px; }
+  .orig { max-width:440px; width:100%; border-radius:10px; }
   @media print { body{background:#fff;padding:0} body::before,body::after,.bar{display:none}
     .sheet{box-shadow:none;background:#fff} }
 </style>
@@ -80,8 +79,7 @@
     {% if figure_svg %}
     <div class="figure">{{ figure_svg|safe }}</div>
     {% elif figure_img %}
-    <div class="figflag">이 그림 유형은 아직 벡터 복원 미지원 — 원본 그림을 참고하세요.</div>
-    <div class="figure"><img class="orig" src="data:image/jpeg;base64,{{ figure_img }}" alt="원본 그림"></div>
+    <div class="figure"><img class="orig" src="data:image/png;base64,{{ figure_img }}" alt="문제 그림"></div>
     {% endif %}
 
     {% if d.intent or d.solution %}<hr class="divider">{% endif %}
