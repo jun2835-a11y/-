@@ -14,12 +14,12 @@
           padding:36px; max-width:520px; width:100%; box-shadow:0 1px 3px rgba(0,0,0,.06); }
   h1 { font-size:20px; margin:0 0 6px; }
   p.sub { color:var(--muted); font-size:13.5px; margin:0 0 24px; line-height:1.6; }
-  .drop { border:2px dashed var(--line); border-radius:10px; padding:32px; text-align:center;
-          cursor:pointer; transition:border-color .15s; }
-  .drop:hover { border-color:var(--accent); }
-  .drop input { display:none; }
-  .drop .hint { color:var(--muted); font-size:13px; margin-top:8px; }
-  #name { margin-top:12px; font-size:13px; color:var(--accent); text-align:center; min-height:18px; }
+  .pick { display:block; padding:15px; border:1.5px solid var(--accent); border-radius:9px;
+          text-align:center; cursor:pointer; color:var(--accent); font-weight:600; font-size:15px;
+          background:#fff; transition:background .15s; }
+  .pick:hover { background:#eff4ff; }
+  .pick input { display:none; }
+  #name { margin-top:12px; font-size:13px; color:var(--muted); text-align:center; min-height:18px; }
   button { margin-top:20px; width:100%; padding:12px; border:none; border-radius:9px;
            background:var(--accent); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
   button:disabled { opacity:.5; cursor:not-allowed; }
@@ -35,9 +35,7 @@
       한글·수식 모두 선명하게.</p>
 
     <form method="post" action="/restore" enctype="multipart/form-data" id="form">
-      <label class="drop" id="drop">
-        <div>📷 클릭해서 문제 사진 선택</div>
-        <div class="hint">JPG · PNG</div>
+      <label class="pick" id="drop">📷 문제 사진 선택 (JPG · PNG)
         <input type="file" name="photo" id="photo" accept="image/*" required>
       </label>
       <div id="name"></div>
