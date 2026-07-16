@@ -1,17 +1,15 @@
-# Render Blueprint — 이 리포를 연결하면 자동으로 웹 서비스가 만들어집니다.
-# 대시보드: New → Blueprint → 이 리포 선택 → ANTHROPIC_API_KEY 입력.
+# Render Blueprint — TikZ 렌더를 위해 Docker(런타임)로 전환.
+# ⚠️ LaTeX 툴체인이 들어가 이미지가 큽니다(수 GB). 무료 플랜은 빌드가
+#    느리거나 메모리/디스크가 부족할 수 있어 Starter 이상 권장.
 services:
   - type: web
-    name: problem-restore
-    runtime: python
-    plan: free                       # 테스트용 무료 플랜 (유휴 시 잠들었다 깨어남)
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
+    name: rescribe
+    runtime: docker
+    plan: starter                 # texlive+xelatex 메모리 때문에 free보다 안전
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     envVars:
       - key: ANTHROPIC_API_KEY
-        sync: false                  # 비밀값 — 대시보드에서 직접 입력(코드에 없음)
+        sync: false               # 대시보드에서 직접 입력(비밀)
       - key: MODEL
-        value: claude-opus-4-8       # 비용 절감 시 claude-haiku-4-5 로 변경
-      - key: PYTHON_VERSION
-        value: "3.12"
+        value: claude-opus-4-8

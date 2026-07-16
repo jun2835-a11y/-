@@ -46,7 +46,14 @@
 
   .figure { margin:24px 0; text-align:center; }
   .figure svg { max-width:100%; height:auto; }
-  .orig { max-width:440px; width:100%; border-radius:10px; }
+
+  .figflag { margin:16px 0 8px; font-size:13px; color:#8a5a00; background:#fbf3e0;
+             border:1px solid #ecd9a8; border-radius:10px; padding:10px 14px; }
+  .tikz { margin:12px auto; max-width:660px; }
+  .tikz summary { cursor:pointer; font-size:12px; color:var(--muted); }
+  .tikz pre { margin-top:8px; background:#1f1e1c; color:#e9e7df; border-radius:10px;
+    padding:14px 16px; font-size:12px; line-height:1.5; overflow-x:auto;
+    font-family:ui-monospace,Menlo,Consolas,monospace; white-space:pre; }
 
   .given { max-width:540px; margin:26px auto 8px; border:1px solid rgba(43,42,39,.28);
            border-radius:12px; padding:20px 24px 16px; position:relative; }
@@ -62,7 +69,7 @@
   .solution { margin-top:10px; }
   .solution .step { margin:6px 0; }
   .answer { margin-top:28px; text-align:right; font-size:17px; font-weight:700; }
-  @media print { body{background:#fff;padding:0} body::before,body::after,.bar{display:none}
+  @media print { body{background:#fff;padding:0} body::before,body::after,.bar,.tikz{display:none}
     .sheet{box-shadow:none;background:#fff} }
 </style>
 </head>
@@ -82,8 +89,13 @@
 
     {% if figure_svg %}
     <div class="figure">{{ figure_svg|safe }}</div>
-    {% elif figure_img %}
-    <div class="figure"><img class="orig" src="data:image/png;base64,{{ figure_img }}" alt="문제 그림"></div>
+    {% if tikz_code %}<details class="tikz"><summary>TikZ 코드 (편집용)</summary><pre>{{ tikz_code }}</pre></details>{% endif %}
+    {% elif tikz_code %}
+    <div class="figflag">그림 컴파일에 실패했습니다 — 아래 TikZ 코드를 확인·수정하세요.</div>
+    <pre class="tikz" style="max-width:660px;margin:0 auto">{{ tikz_code }}</pre>
+    {% if figure_err %}<details class="tikz"><summary>오류 로그</summary><pre>{{ figure_err }}</pre></details>{% endif %}
+    {% elif figure_err %}
+    <div class="figflag">{{ figure_err }}</div>
     {% endif %}
 
     {% if d.given %}

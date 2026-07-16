@@ -76,18 +76,23 @@ def restore():
     except Exception as e:  # noqa: BLE001 - 사용자에게 원인 노출
         return render_template("index.html", error=f"복원 실패: {e}"), 500
     # 그림 처리: 원기둥이면 벡터로 재생성, 그 외 그림은 원본을 폴백으로
-    figure_img = None
+    figure_svg = None
+    tikz_code = None
+    figure_err = None
     if data.get("has_figure"):
         try:
-            cleaned = _clean_scan(_crop_figure(img, data.get("figure_bbox")))
-            b = io.BytesIO()
-            cleaned.save(b, format="PNG")
-            figure_img = base64.b64encode(b.getvalue()).decode()
-        except Exception:
-            figure_img = base64.b64encode(jpeg).decode()
+            tikz_code = (extract.extract_tikz(jpeg, "image/jpeg") or {}).get("tikz", "").strip()
+        except Exception as e:  # noqa: BLE001
+            figure_err = f"TikZ 생성 실패: {e}"
+        if tikz_code:
+            try:
+                from tikz import render_tikz
+                figure_svg = render_tikz(tikz_code)
+            except Exception as e:  # noqa: BLE001 - 코드는 노출해 수정 가능하게
+                figure_err = str(e)[:1400]
 
-    return render_template("result.html", d=data,
-                           figure_svg=None, figure_img=figure_img)
+    return render_template("result.html", d=data, figure_svg=figure_svg,
+                           tikz_code=tikz_code, figure_err=figure_err)
 
 
 if __name__ == "__main__":

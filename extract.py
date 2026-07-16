@@ -128,6 +128,43 @@ SOLID_PROMPT = (
 )
 
 
+# ── 그림 → TikZ 코드 생성 (모든 유형 공통) ────────────────────────
+TIKZ_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {"tikz": {"type": "string",
+                            "description": "tikzpicture 환경 본문(전체 코드)"}},
+    "required": ["tikz"],
+}
+
+TIKZ_PROMPT = (
+    "이 문제의 그림을 재현하는 TikZ 코드를 생성하세요.\n"
+    "- `\\begin{tikzpicture}...\\end{tikzpicture}` 환경 전체를 출력. "
+    "documentclass/usepackage 등 프리앰블은 넣지 마세요(서버가 감쌈).\n"
+    "- 사용 가능: tikz, pgfplots(축·함수그래프), tikz-3dplot(3D), 기본 라이브러리들.\n"
+    "- **구조를 원본과 정확히**: 점/선/원의 개수와 연결, 각도, 3D 배치를 맞출 것.\n"
+    "- 숨은선은 dashed, 색칠 영역은 fill, 라벨은 수식/문자($...$)로.\n"
+    "- 손글씨·낙서는 무시. 그림만."
+)
+
+
+def extract_tikz(image_bytes: bytes, media_type: str = "image/jpeg") -> dict:
+    """그림 사진 → {'tikz': '<tikzpicture 코드>'}."""
+    b64 = base64.b64encode(image_bytes).decode()
+    resp = _get_client().messages.create(
+        model=MODEL,
+        max_tokens=4000,
+        output_config={"format": {"type": "json_schema", "schema": TIKZ_SCHEMA}},
+        messages=[{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64",
+                                         "media_type": media_type, "data": b64}},
+            {"type": "text", "text": TIKZ_PROMPT},
+        ]}],
+    )
+    text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
+    return json.loads(text)
+
+
 def extract_solid(image_bytes: bytes, media_type: str = "image/jpeg") -> dict:
     """원기둥 그림 → render_solid()가 받는 파라미터 dict."""
     b64 = base64.b64encode(image_bytes).decode()
