@@ -1,15 +1,17 @@
-# Render Blueprint — TikZ 렌더를 위해 Docker(런타임)로 전환.
-# ⚠️ LaTeX 툴체인이 들어가 이미지가 큽니다(수 GB). 무료 플랜은 빌드가
-#    느리거나 메모리/디스크가 부족할 수 있어 Starter 이상 권장.
+# Render Blueprint — 경량 Python 서비스 (서버 LaTeX 불필요).
+# TikZ는 브라우저(TikZJax)에서 렌더하므로 Docker가 필요 없습니다.
 services:
   - type: web
-    name: rescribe
-    runtime: docker
-    plan: starter                 # texlive+xelatex 메모리 때문에 free보다 안전
-    dockerfilePath: ./Dockerfile
+    name: problem-restore
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
     healthCheckPath: /healthz
     envVars:
       - key: ANTHROPIC_API_KEY
-        sync: false               # 대시보드에서 직접 입력(비밀)
+        sync: false
       - key: MODEL
         value: claude-opus-4-8
+      - key: PYTHON_VERSION
+        value: "3.12"

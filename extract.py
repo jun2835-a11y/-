@@ -139,12 +139,13 @@ TIKZ_SCHEMA = {
 
 TIKZ_PROMPT = (
     "이 문제의 그림을 재현하는 TikZ 코드를 생성하세요.\n"
-    "- `\\begin{tikzpicture}...\\end{tikzpicture}` 환경 전체를 출력. "
-    "documentclass/usepackage 등 프리앰블은 넣지 마세요(서버가 감쌈).\n"
-    "- 사용 가능: tikz, pgfplots(축·함수그래프), tikz-3dplot(3D), 기본 라이브러리들.\n"
-    "- **구조를 원본과 정확히**: 점/선/원의 개수와 연결, 각도, 3D 배치를 맞출 것.\n"
-    "- 숨은선은 dashed, 색칠 영역은 fill, 라벨은 수식/문자($...$)로.\n"
-    "- 손글씨·낙서는 무시. 그림만."
+    "- `\\begin{tikzpicture}...\\end{tikzpicture}` 환경만 출력. "
+    "documentclass/usepackage 등 프리앰블 금지.\n"
+    "- **핵심 tikz만 사용** — pgfplots, tikz-3dplot, 외부 라이브러리, \\usepackage 금지 "
+    "(브라우저 렌더러가 서브셋만 지원). 함수그래프·3D도 좌표/plot으로 직접 그릴 것.\n"
+    "- 라벨은 영문/수식($...$)만 (한글 금지).\n"
+    "- 구조를 원본과 정확히: 점/선/원의 개수·연결·각도. 숨은선 dashed, 색칠 fill.\n"
+    "- 손글씨·낙서 무시. 그림만."
 )
 
 

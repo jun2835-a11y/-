@@ -10,6 +10,9 @@
   window.MathJax = { tex:{inlineMath:[["$","$"]],displayMath:[["$$","$$"]]}, svg:{fontCache:"global"} };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<!-- TikZ를 브라우저에서 렌더 (서버 LaTeX 불필요) -->
+<link rel="stylesheet" href="https://tikzjax.com/v1/fonts.css">
+<script src="https://tikzjax.com/v1/tikzjax.js"></script>
 <style>
   :root { --bg:#e8e6df; --ink:#2b2a27; --grey:#a3a19a; --muted:#86847c; --line:rgba(43,42,39,.14); }
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -87,13 +90,9 @@
       {% if d.points %}<span class="points">{{ d.points }}</span>{% endif %}
     </div>
 
-    {% if figure_svg %}
-    <div class="figure">{{ figure_svg|safe }}</div>
-    {% if tikz_code %}<details class="tikz"><summary>TikZ 코드 (편집용)</summary><pre>{{ tikz_code }}</pre></details>{% endif %}
-    {% elif tikz_code %}
-    <div class="figflag">그림 컴파일에 실패했습니다 — 아래 TikZ 코드를 확인·수정하세요.</div>
-    <pre class="tikz" style="max-width:660px;margin:0 auto">{{ tikz_code }}</pre>
-    {% if figure_err %}<details class="tikz"><summary>오류 로그</summary><pre>{{ figure_err }}</pre></details>{% endif %}
+    {% if tikz_code %}
+    <div class="figure"><script type="text/tikz">{{ tikz_code|safe }}</script></div>
+    <details class="tikz"><summary>TikZ 코드 (편집용)</summary><pre>{{ tikz_code }}</pre></details>
     {% elif figure_err %}
     <div class="figflag">{{ figure_err }}</div>
     {% endif %}
