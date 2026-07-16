@@ -26,6 +26,9 @@ SCHEMA = {
         "solution": {"type": "array", "items": {"type": "string"},
                      "description": "정답풀이 줄 목록. 각 줄 한글+수식($...$)"},
         "answer":   {"type": "string", "description": "정답 (예: '⑤', 없으면 빈 문자열)"},
+        "given":    {"type": "array", "items": {"type": "string"},
+                     "description": "<보기> 상자의 조건 항목 목록. 각 항목 한 문자열"
+                                    "(예: 'ㄱ. Fe(s)은 전기 전도성이 있다.'). 수식은 $...$. 없으면 빈 배열"},
         "has_figure": {"type": "boolean", "description": "그림(도형·그래프) 포함 여부"},
         "figure_type": {"type": "string",
                         "description": "그림 종류: none / cylinder / graph / plane / other"},
@@ -35,7 +38,7 @@ SCHEMA = {
                         "required": ["x0", "y0", "x1", "y1"],
                         "description": "그림 영역 상대좌표(0~1, 좌상단 x0,y0 ~ 우하단 x1,y1). 없으면 모두 0"},
     },
-    "required": ["qnum", "points", "stem", "choices", "intent",
+    "required": ["qnum", "points", "stem", "choices", "given", "intent",
                  "solution", "answer", "has_figure", "figure_type", "figure_bbox"],
 }
 

@@ -43,6 +43,17 @@
   .qno { font-size:21px; font-weight:800; letter-spacing:-.03em; }
   .stem { font-size:17px; flex:1; }
   .points { color:var(--muted); font-size:13px; white-space:nowrap; }
+
+  .figure { margin:24px 0; text-align:center; }
+  .figure svg { max-width:100%; height:auto; }
+  .orig { max-width:440px; width:100%; border-radius:10px; }
+
+  .given { max-width:540px; margin:26px auto 8px; border:1px solid rgba(43,42,39,.28);
+           border-radius:12px; padding:20px 24px 16px; position:relative; }
+  .given .gh { position:absolute; top:-11px; left:50%; transform:translateX(-50%);
+    background:#f1f0ec; padding:0 14px; font-size:12px; letter-spacing:.4em; color:var(--muted); }
+  .given .gi { font-size:15px; margin:6px 0; }
+
   .choices { display:flex; flex-wrap:wrap; gap:24px; margin:22px 0 6px; padding-left:24px; font-size:16px; }
   .divider { border:none; border-top:1px solid var(--line); margin:32px 0; }
   .tag { font-size:10.5px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
@@ -51,9 +62,6 @@
   .solution { margin-top:10px; }
   .solution .step { margin:6px 0; }
   .answer { margin-top:28px; text-align:right; font-size:17px; font-weight:700; }
-  .figure { margin:22px 0; text-align:center; }
-  .figure svg { max-width:100%; height:auto; }
-  .orig { max-width:440px; width:100%; border-radius:10px; }
   @media print { body{background:#fff;padding:0} body::before,body::after,.bar{display:none}
     .sheet{box-shadow:none;background:#fff} }
 </style>
@@ -72,14 +80,20 @@
       {% if d.points %}<span class="points">{{ d.points }}</span>{% endif %}
     </div>
 
-    {% if d.choices %}
-    <div class="choices">{% for c in d.choices %}<span>{{ c }}</span>{% endfor %}</div>
-    {% endif %}
-
     {% if figure_svg %}
     <div class="figure">{{ figure_svg|safe }}</div>
     {% elif figure_img %}
     <div class="figure"><img class="orig" src="data:image/png;base64,{{ figure_img }}" alt="문제 그림"></div>
+    {% endif %}
+
+    {% if d.given %}
+    <div class="given"><span class="gh">보 기</span>
+      {% for g in d.given %}<div class="gi">{{ g }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% if d.choices %}
+    <div class="choices">{% for c in d.choices %}<span>{{ c }}</span>{% endfor %}</div>
     {% endif %}
 
     {% if d.intent or d.solution %}<hr class="divider">{% endif %}

@@ -37,12 +37,16 @@ def _clean_scan(pil):
     import numpy as np
     from PIL import ImageFilter, Image
     g = pil.convert("L")
-    rad = max(8, max(g.size) // 18)
     arr = np.asarray(g, dtype=np.float32)
-    bg = np.asarray(g.filter(ImageFilter.GaussianBlur(rad)), dtype=np.float32)
-    norm = np.clip(arr / (bg + 1.0) * 255.0, 0, 255)        # 배경 → 흰색
-    lo, hi = float(np.percentile(norm, 6)), float(np.percentile(norm, 94))
-    norm = np.clip((norm - lo) / max(hi - lo, 1.0) * 255.0, 0, 255)  # 대비 스트레치
+    mid = float(((arr > 70) & (arr < 200)).mean())         # 원본 중간톤 비율
+    if mid < 0.18:                                         # 선그림: 배경 평탄화 + 대비강화
+        rad = max(8, max(g.size) // 18)
+        bg = np.asarray(g.filter(ImageFilter.GaussianBlur(rad)), dtype=np.float32)
+        norm = np.clip(arr / (bg + 1.0) * 255.0, 0, 255)
+        norm = np.clip((norm - 30.0) / 205.0 * 255.0, 0, 255)
+    else:                                                  # 음영/사진: 전역 화이트밸런스만(음영 보존)
+        white = float(np.percentile(arr, 96)) or 255.0
+        norm = np.clip(arr / white * 255.0, 0, 255)
     return Image.fromarray(norm.astype("uint8"), "L")
 
 
