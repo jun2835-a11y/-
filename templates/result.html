@@ -3,53 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>복원 결과 · {{ d.qnum }}</title>
+<title>Rescribe — {{ d.qnum or '복원 결과' }}</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ccircle%20cx='16'%20cy='16'%20r='13.5'%20fill='none'%20stroke='%232a2a28'%20stroke-width='1.6'/%3E%3Ctext%20x='16'%20y='22'%20font-family='Helvetica,Arial,sans-serif'%20font-size='16'%20font-weight='700'%20text-anchor='middle'%20fill='%232a2a28'%3ER%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <script>
-  window.MathJax = {
-    tex: { inlineMath: [["$", "$"]], displayMath: [["$$", "$$"]] },
-    svg: { fontCache: "global" },
-  };
+  window.MathJax = { tex:{inlineMath:[["$","$"]],displayMath:[["$$","$$"]]}, svg:{fontCache:"global"} };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
 <style>
-  :root { --ink:#1a1c20; --muted:#6b7280; --line:#e5e7eb; --accent:#1d4ed8; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:#f3f4f6; color:var(--ink);
-         font-family:"NanumGothic","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
-         line-height:1.75; padding:28px 16px; }
-  .bar { max-width:760px; margin:0 auto 16px; display:flex; gap:10px; }
-  .bar a, .bar button { text-decoration:none; font-size:13px; padding:8px 14px; border-radius:8px;
-        border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; }
-  .bar .primary { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
-  .sheet { max-width:760px; margin:0 auto; background:#fff; padding:40px 46px;
-           border:1px solid var(--line); border-radius:10px; }
+  :root { --bg:#e8e6df; --ink:#2b2a27; --grey:#a3a19a; --muted:#86847c; --line:rgba(43,42,39,.14); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background:var(--bg); color:var(--ink); min-height:100vh;
+    font-family:"Pretendard Variable",Pretendard,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased; letter-spacing:-.01em;
+    line-height:1.75; padding:34px 18px 120px; position:relative; overflow-x:hidden;
+  }
+  body::before { content:""; position:fixed; inset:0; z-index:50; pointer-events:none;
+    opacity:.45; mix-blend-mode:soft-light;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  body::after { content:""; position:fixed; left:0; right:0; bottom:0; height:180px; z-index:0;
+    pointer-events:none; opacity:.5; filter:blur(36px);
+    background:linear-gradient(90deg,#f3b9c8,#f7d3ad 42%,#cbc4e9 78%,#bcd3e6); }
+
+  .bar { max-width:760px; margin:0 auto 18px; display:flex; gap:10px; align-items:center;
+         position:relative; z-index:2; }
+  .brand { font-weight:800; color:var(--grey); letter-spacing:-.04em; font-size:22px; margin-right:auto; }
+  .bar a, .bar button { text-decoration:none; font-size:12.5px; font-weight:600; font-family:inherit;
+    padding:9px 15px; border-radius:11px; border:1px solid var(--line);
+    background:rgba(255,255,255,.5); color:var(--ink); cursor:pointer; letter-spacing:-.01em; }
+  .bar .primary { background:var(--ink); color:#f3f1ea; border-color:var(--ink); }
+
+  .sheet { max-width:760px; margin:0 auto; border-radius:24px; padding:44px 48px;
+    position:relative; z-index:2;
+    background:radial-gradient(130% 100% at 30% 0%, #ffffff, #efeee9 55%, #e2e0d8 100%);
+    box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 30px 60px -34px rgba(40,38,34,.4);
+  }
   .qhead { display:flex; align-items:baseline; gap:10px; }
-  .qno { font-size:20px; font-weight:700; }
+  .qno { font-size:21px; font-weight:800; letter-spacing:-.03em; }
   .stem { font-size:17px; flex:1; }
-  .points { color:var(--muted); font-size:14px; white-space:nowrap; }
-  .choices { display:flex; flex-wrap:wrap; gap:26px; margin:20px 0 6px; padding-left:26px; font-size:16px; }
-  .divider { border:none; border-top:1px solid var(--line); margin:30px 0; }
-  .tag { font-size:13px; font-weight:700; color:var(--accent); }
-  .intent { background:#f8fafc; border-left:3px solid var(--accent); padding:12px 16px;
-            border-radius:0 8px 8px 0; margin-top:8px; }
-  .solution { margin-top:8px; }
+  .points { color:var(--muted); font-size:13px; white-space:nowrap; }
+  .choices { display:flex; flex-wrap:wrap; gap:24px; margin:22px 0 6px; padding-left:24px; font-size:16px; }
+  .divider { border:none; border-top:1px solid var(--line); margin:32px 0; }
+  .tag { font-size:10.5px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
+  .intent { background:rgba(255,255,255,.55); border-left:2px solid var(--ink);
+            padding:13px 16px; border-radius:0 10px 10px 0; margin-top:10px; font-size:15px; }
+  .solution { margin-top:10px; }
   .solution .step { margin:6px 0; }
-  .answer { margin-top:26px; text-align:right; font-size:17px; font-weight:700; }
-  .answer .a { color:var(--accent); }
-  .figflag { margin:18px 0; background:#fffbeb; border:1px solid #fde68a; color:#92400e;
-             border-radius:8px; padding:10px 14px; font-size:13px; }
-  .figure { margin:20px 0; text-align:center; }
+  .answer { margin-top:28px; text-align:right; font-size:17px; font-weight:700; }
+  .figure { margin:22px 0; text-align:center; }
   .figure svg { max-width:100%; height:auto; }
-  .orig { max-width:400px; width:100%; border:1px solid var(--line);
-          border-radius:8px; margin-top:10px; }
-  @media print { body { background:#fff; padding:0; } .bar { display:none; }
-    .sheet { border:none; } }
+  .figflag { margin:16px 0 6px; font-size:12px; color:var(--muted); }
+  .orig { max-width:400px; width:100%; border:1px solid var(--line); border-radius:12px; }
+  @media print { body{background:#fff;padding:0} body::before,body::after,.bar{display:none}
+    .sheet{box-shadow:none;background:#fff} }
 </style>
 </head>
 <body>
   <div class="bar">
+    <span class="brand">Rescribe</span>
     <a href="/">← 새 사진</a>
-    <button class="primary" onclick="window.print()">인쇄 / PDF 저장</button>
+    <button class="primary" onclick="window.print()">인쇄 / PDF</button>
   </div>
 
   <div class="sheet">
@@ -60,18 +74,14 @@
     </div>
 
     {% if d.choices %}
-    <div class="choices">
-      {% for c in d.choices %}<span>{{ c }}</span>{% endfor %}
-    </div>
+    <div class="choices">{% for c in d.choices %}<span>{{ c }}</span>{% endfor %}</div>
     {% endif %}
 
     {% if figure_svg %}
     <div class="figure">{{ figure_svg|safe }}</div>
     {% elif figure_img %}
     <div class="figflag">이 그림 유형은 아직 벡터 복원 미지원 — 원본 그림을 참고하세요.</div>
-    <div style="text-align:center">
-      <img class="orig" src="data:image/jpeg;base64,{{ figure_img }}" alt="원본 그림">
-    </div>
+    <div class="figure"><img class="orig" src="data:image/jpeg;base64,{{ figure_img }}" alt="원본 그림"></div>
     {% endif %}
 
     {% if d.intent or d.solution %}<hr class="divider">{% endif %}
@@ -82,13 +92,11 @@
     {% endif %}
 
     {% if d.solution %}
-    <div class="tag" style="margin-top:26px;">정답풀이</div>
-    <div class="solution">
-      {% for line in d.solution %}<div class="step">{{ line }}</div>{% endfor %}
-    </div>
+    <div class="tag" style="display:block;margin-top:28px;">정답풀이</div>
+    <div class="solution">{% for line in d.solution %}<div class="step">{{ line }}</div>{% endfor %}</div>
     {% endif %}
 
-    {% if d.answer %}<div class="answer">정답 <span class="a">{{ d.answer }}</span></div>{% endif %}
+    {% if d.answer %}<div class="answer">정답 {{ d.answer }}</div>{% endif %}
   </div>
 </body>
 </html>
