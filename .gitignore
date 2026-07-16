@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+outputs/
+
+# 비밀값 — 절대 커밋 금지
+.env
+.env.*
+*.key

@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>physlib — 물리 다이어그램 생성기</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #ffffff; --border: #e3e5e9; --ink: #1e2126;
+    --muted: #6b7280; --accent: #2563eb; --accent-ink: #fff;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.5;
+  }
+  header {
+    padding: 16px 22px; background: var(--panel);
+    border-bottom: 1px solid var(--border); display: flex;
+    align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  header .sub { color: var(--muted); font-size: 12.5px; }
+  .layout { display: grid; grid-template-columns: 320px 1fr; gap: 0;
+            min-height: calc(100vh - 58px); }
+  .sidebar {
+    background: var(--panel); border-right: 1px solid var(--border);
+    padding: 18px; overflow-y: auto;
+  }
+  .main { padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+  @media (max-width: 820px) { .layout { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); } }
+
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .seg button {
+    flex: 1 1 auto; padding: 8px 10px; border: 1px solid var(--border);
+    background: #fff; border-radius: 8px; cursor: pointer; font-size: 12.5px;
+    color: var(--ink); white-space: nowrap;
+  }
+  .seg button.active { background: var(--accent); color: var(--accent-ink);
+    border-color: var(--accent); font-weight: 600; }
+
+  .field { margin-bottom: 14px; }
+  .field > label { display: block; font-size: 12px; color: var(--muted);
+    margin-bottom: 5px; font-weight: 600; }
+  .field input[type=text], .field input[type=number], .field select {
+    width: 100%; padding: 7px 9px; border: 1px solid var(--border);
+    border-radius: 7px; font-size: 13px; background: #fff; color: var(--ink);
+  }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .row input[type=range] { flex: 1; }
+  .row .val { width: 46px; text-align: right; font-variant-numeric: tabular-nums;
+    color: var(--muted); }
+  .check { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .check input { width: 16px; height: 16px; }
+  .check label { font-size: 13px; }
+
+  .forces-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .forces-table th { text-align: left; color: var(--muted); font-weight: 600;
+    padding: 2px 4px; }
+  .forces-table td { padding: 2px; }
+  .forces-table input, .forces-table select { padding: 4px 5px; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 6px; width: 100%; }
+  .forces-table .del { border: none; background: none; cursor: pointer;
+    color: #b91c1c; font-size: 15px; padding: 0 4px; }
+  .addbtn { margin-top: 6px; padding: 6px 10px; border: 1px dashed var(--border);
+    background: #fff; border-radius: 7px; cursor: pointer; font-size: 12px;
+    color: var(--muted); width: 100%; }
+
+  .preview-card {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; display: flex; align-items: center; justify-content: center;
+    min-height: 360px; overflow: auto;
+  }
+  .preview-card svg { max-width: 100%; height: auto; }
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .actions button {
+    padding: 8px 14px; border: 1px solid var(--border); background: #fff;
+    border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--ink);
+  }
+  .actions button.primary { background: var(--accent); color: #fff;
+    border-color: var(--accent); font-weight: 600; }
+  .actions .id-field { display: flex; align-items: center; gap: 7px;
+    margin-left: auto; }
+  .actions .id-field input { padding: 7px 9px; border: 1px solid var(--border);
+    border-radius: 7px; font-size: 13px; width: 160px; }
+  .note { color: var(--muted); font-size: 12px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #111827; color: #fff; padding: 9px 16px; border-radius: 8px;
+    font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>physlib · 물리 다이어그램 생성기</h1>
+  <span class="sub">파라미터를 조절해 교과서 품질 SVG를 만들고 SVG/PNG로 내려받으세요 — 파이썬 불필요</span>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="seg" id="componentSeg"></div>
+    <div id="controls"></div>
+  </aside>
+
+  <main class="main">
+    <div class="preview-card" id="preview"></div>
+    <div class="actions">
+      <button class="primary" id="btnPng">PNG 다운로드</button>
+      <button id="btnSvg">SVG 다운로드</button>
+      <button id="btnCopy">SVG 복사</button>
+      <div class="id-field">
+        <label for="idInput" class="note">문제 ID</label>
+        <input type="text" id="idInput" value="PHY-MEC-0042">
+      </div>
+    </div>
+    <p class="note">라벨 마크업: 아래첨자 <code>m_1</code>, 위첨자 <code>x^2</code>,
+      그리스 <code>\theta \mu \alpha</code>. PNG는 브라우저에 설치된 NanumGothic으로 렌더됩니다.</p>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+// ═══════════════════════════════════════════════════════════════════
+//  physlib.js — 파이썬 physlib(primitives + components)의 기하 포팅
+//  좌표계·각도 규약·수식은 파이썬 원본과 동일하게 유지한다.
+// ═══════════════════════════════════════════════════════════════════
+
+// ── 상수 (constants.py) ────────────────────────────────────────────
+const WHITE = "#ffffff";
+const COLOR_STRUCTURE = "#333333";
+const COLOR_HATCH = "#888888";
+const COLOR_FORCE = "#c0392b";
+const COLOR_DIM = "#555555";
+const COLOR_TEXT = "#111111";
+const FORCE_PALETTE = {
+  gravity: "#c0392b", normal: "#2c7fb8", tension: "#2e7d32",
+  friction: "#8e44ad", applied: "#e67e22", default: COLOR_FORCE,
+};
+const STROKE_STRUCTURE = 2.0, STROKE_FORCE = 2.4, STROKE_THIN = 1.1;
+const ARROW_LEN = 12.0, ARROW_HALF_W = 5.0;
+const FONT_FAMILY = "NanumGothic, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
+const FONT_SIZE = 17.0, LABEL_OFFSET = 12.0, SUB_SCALE = 0.68;
+const GREEK = {
+  "\\theta": "θ", "\\mu": "μ", "\\alpha": "α", "\\beta": "β", "\\gamma": "γ",
+  "\\phi": "φ", "\\omega": "ω", "\\pi": "π", "\\lambda": "λ", "\\rho": "ρ",
+  "\\sigma": "σ", "\\tau": "τ", "\\delta": "δ", "\\Delta": "Δ",
+  "\\Sigma": "Σ", "\\Omega": "Ω",
+};
+
+const f2 = (n) => n.toFixed(2);
+const f1 = (n) => n.toFixed(1);
+
+// ── 텍스트 / 라벨 ──────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function tokenize(text) {
+  for (const [name, ch] of Object.entries(GREEK)) text = text.split(name).join(ch);
+  const segs = []; let i = 0; const n = text.length;
+  while (i < n) {
+    const c = text[i];
+    if (c === "_" || c === "^") {
+      const kind = c === "_" ? "sub" : "sup"; i++;
+      let content = "";
+      if (i < n && text[i] === "{") {
+        const j = text.indexOf("}", i);
+        content = j < 0 ? text.slice(i + 1) : text.slice(i + 1, j);
+        i = j < 0 ? n : j + 1;
+      } else if (i < n) { content = text[i]; i++; }
+      segs.push([content, kind]);
+    } else {
+      let j = i;
+      while (j < n && text[j] !== "_" && text[j] !== "^") j++;
+      segs.push([text.slice(i, j), "normal"]); i = j;
+    }
+  }
+  return segs;
+}
+function buildTspans(s, size) {
+  const segs = tokenize(s); let cur = 0.0; const parts = [];
+  for (const [content, kind] of segs) {
+    let target, fs;
+    if (kind === "sub") { target = 0.30 * size; fs = size * SUB_SCALE; }
+    else if (kind === "sup") { target = -0.45 * size; fs = size * SUB_SCALE; }
+    else { target = 0.0; fs = size; }
+    const dy = target - cur; cur = target;
+    parts.push(`<tspan dy="${f2(dy)}" font-size="${f1(fs)}">${esc(content)}</tspan>`);
+  }
+  return parts.join("");
+}
+function text(x, y, s, o = {}) {
+  const { size = FONT_SIZE, color = COLOR_TEXT, anchor = "middle",
+          baseline = "alphabetic", weight = "normal", halo = false,
+          halo_width = 3.6 } = o;
+  const tsp = buildTspans(s, size);
+  const common = `x="${f2(x)}" y="${f2(y)}" font-family="${FONT_FAMILY}" ` +
+    `font-size="${f1(size)}" text-anchor="${anchor}" ` +
+    `dominant-baseline="${baseline}" font-weight="${weight}"`;
+  const fg = `<text ${common} fill="${color}">${tsp}</text>`;
+  if (!halo) return fg;
+  const bg = `<text ${common} fill="none" stroke="${WHITE}" ` +
+    `stroke-width="${halo_width}" stroke-linejoin="round">${tsp}</text>`;
+  return bg + fg;
+}
+const dim_label = (x, y, s, o = {}) => text(x, y, s, { color: COLOR_DIM, ...o });
+
+// ── SVG 문서 ───────────────────────────────────────────────────────
+function svg_document(width, height, body, o = {}) {
+  const { bg = WHITE, defs = "" } = o;
+  const defsBlock = defs ? `<defs>${defs}</defs>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width.toFixed(0)}" ` +
+    `height="${height.toFixed(0)}" viewBox="0 0 ${width.toFixed(0)} ${height.toFixed(0)}">` +
+    `${defsBlock}<rect x="0" y="0" width="${width.toFixed(0)}" ` +
+    `height="${height.toFixed(0)}" fill="${bg}"/>${body}</svg>`;
+}
+
+// ── 벡터 ───────────────────────────────────────────────────────────
+function vector(x, y, dx, dy, label = null, o = {}) {
+  const { color = COLOR_FORCE, width = STROKE_FORCE, label_offset = LABEL_OFFSET,
+          label_pos = null, label_anchor = null, dash = null } = o;
+  const L = Math.hypot(dx, dy);
+  if (L < 1e-6) return "";
+  const ux = dx / L, uy = dy / L, px = -uy, py = ux;
+  const tipx = x + dx, tipy = y + dy;
+  const basex = tipx - ux * ARROW_LEN, basey = tipy - uy * ARROW_LEN;
+  const b1 = [basex + px * ARROW_HALF_W, basey + py * ARROW_HALF_W];
+  const b2 = [basex - px * ARROW_HALF_W, basey - py * ARROW_HALF_W];
+  const dashAttr = dash ? ` stroke-dasharray="${dash}"` : "";
+  let out = `<line x1="${f2(x)}" y1="${f2(y)}" x2="${f2(basex)}" y2="${f2(basey)}" ` +
+    `stroke="${color}" stroke-width="${width}" stroke-linecap="round"${dashAttr}/>`;
+  out += `<polygon points="${f2(tipx)},${f2(tipy)} ${f2(b1[0])},${f2(b1[1])} ` +
+    `${f2(b2[0])},${f2(b2[1])}" fill="${color}"/>`;
+  if (label) {
+    let lx, ly, anchor;
+    if (label_pos) { [lx, ly] = label_pos; }
+    else { lx = tipx + ux * label_offset; ly = tipy + uy * label_offset; }
+    anchor = label_anchor !== null ? label_anchor
+      : (ux > 0.3 ? "start" : ux < -0.3 ? "end" : "middle");
+    out += text(lx, ly, label, { color, anchor, baseline: "central", halo: true });
+  }
+  return out;
+}
+
+// ── 물체 사각형 ────────────────────────────────────────────────────
+function block(cx, cy, w, h, label = null, o = {}) {
+  const { color = COLOR_STRUCTURE, fill = "#f2f2f2", label_color = COLOR_TEXT } = o;
+  const x = cx - w / 2, y = cy - h / 2;
+  let out = `<rect x="${f2(x)}" y="${f2(y)}" width="${f2(w)}" height="${f2(h)}" ` +
+    `rx="2" fill="${fill}" stroke="${color}" stroke-width="${STROKE_STRUCTURE}"/>`;
+  if (label) out += text(cx, cy, label, { color: label_color, anchor: "middle",
+    baseline: "central", halo: true });
+  return out;
+}
+function oriented_block(cx, cy, ux, uy, hl, hh, label = null, o = {}) {
+  const { color = COLOR_STRUCTURE, fill = "#f2f2f2", label_color = COLOR_TEXT } = o;
+  const px = -uy, py = ux;
+  const corners = [
+    [cx - hl * ux - hh * px, cy - hl * uy - hh * py],
+    [cx + hl * ux - hh * px, cy + hl * uy - hh * py],
+    [cx + hl * ux + hh * px, cy + hl * uy + hh * py],
+    [cx - hl * ux + hh * px, cy - hl * uy + hh * py],
+  ];
+  const poly = corners.map(([x, y]) => `${f2(x)},${f2(y)}`).join(" ");
+  let out = `<polygon points="${poly}" fill="${fill}" stroke="${color}" ` +
+    `stroke-width="${STROKE_STRUCTURE}" stroke-linejoin="round"/>`;
+  if (label) out += text(cx, cy, label, { color: label_color, anchor: "middle",
+    baseline: "central", halo: true });
+  return out;
+}
+
+// ── 해칭 다각형 ────────────────────────────────────────────────────
+function hatchedPolygon(points, clip_id, spacing = 9.0) {
+  const xs = points.map((p) => p[0]), ys = points.map((p) => p[1]);
+  const minx = Math.min(...xs), maxx = Math.max(...xs);
+  const miny = Math.min(...ys), maxy = Math.max(...ys);
+  const poly = points.map(([x, y]) => `${f2(x)},${f2(y)}`).join(" ");
+  const defs = `<clipPath id="${clip_id}"><polygon points="${poly}"/></clipPath>`;
+  const lines = []; const cmax = maxx - miny;
+  const span = (maxx - minx) + (maxy - miny); let c = minx - maxy;
+  while (c <= cmax) {
+    const x1 = c + miny - span, y1 = miny - span;
+    const x2 = c + maxy + span, y2 = maxy + span;
+    lines.push(`<line x1="${f2(x1)}" y1="${f2(y1)}" x2="${f2(x2)}" y2="${f2(y2)}" ` +
+      `stroke="${COLOR_HATCH}" stroke-width="${STROKE_THIN}"/>`);
+    c += spacing;
+  }
+  const body = `<g clip-path="url(#${clip_id})">${lines.join("")}</g>`;
+  return { defs, body };
+}
+
+// ── 고정 경계 (벽/천장/바닥) ───────────────────────────────────────
+function fixed_boundary(p1, p2, clip_id, o = {}) {
+  const { depth = 13.0, side = 1, color = COLOR_STRUCTURE } = o;
+  const [x1, y1] = p1, [x2, y2] = p2;
+  const L = Math.hypot(x2 - x1, y2 - y1);
+  const ux = (x2 - x1) / L, uy = (y2 - y1) / L;
+  const nx = -uy * side, ny = ux * side;
+  const band = [[x1, y1], [x2, y2],
+    [x2 + nx * depth, y2 + ny * depth], [x1 + nx * depth, y1 + ny * depth]];
+  const { defs, body: hatch } = hatchedPolygon(band, clip_id, 8.0);
+  const line = `<line x1="${f2(x1)}" y1="${f2(y1)}" x2="${f2(x2)}" y2="${f2(y2)}" ` +
+    `stroke="${color}" stroke-width="${STROKE_STRUCTURE}"/>`;
+  return { defs, body: hatch + line };
+}
+
+// ── 빗면 ───────────────────────────────────────────────────────────
+function incline(x, y, angle, length, label = null, o = {}) {
+  const { clip_id = "incline_hatch", color = COLOR_STRUCTURE } = o;
+  const th = angle * Math.PI / 180;
+  const ax = x, ay = y;
+  const cx = x + length * Math.cos(th), cy = y;
+  const bx = cx, by = y - length * Math.sin(th);
+  const pts = [[ax, ay], [cx, cy], [bx, by]];
+  const { defs, body: hatch } = hatchedPolygon(pts, clip_id);
+  const poly = pts.map(([px, py]) => `${f2(px)},${f2(py)}`).join(" ");
+  const outline = `<polygon points="${poly}" fill="none" stroke="${color}" ` +
+    `stroke-width="${STROKE_STRUCTURE}" stroke-linejoin="round"/>`;
+  let body = hatch + outline;
+  if (label) {
+    const lx = ax + 30 * Math.cos(th / 2), ly = ay - 30 * Math.sin(th / 2);
+    body += text(lx, ly, label, { color: COLOR_DIM, anchor: "middle", baseline: "central" });
+  }
+  return { defs, body };
+}
+function incline_apex(x, y, angle, length) {
+  const th = angle * Math.PI / 180;
+  return [[x, y], [x + length * Math.cos(th), y - length * Math.sin(th)]];
+}
+
+// ── 도르래 / 줄 / 용수철 ───────────────────────────────────────────
+function pulley(cx, cy, r, color = COLOR_STRUCTURE) {
+  return `<circle cx="${f2(cx)}" cy="${f2(cy)}" r="${f2(r)}" fill="${WHITE}" ` +
+    `stroke="${color}" stroke-width="${STROKE_STRUCTURE}"/>` +
+    `<circle cx="${f2(cx)}" cy="${f2(cy)}" r="${f2(r - 3.5)}" fill="none" ` +
+    `stroke="${color}" stroke-width="${STROKE_THIN}"/>` +
+    `<circle cx="${f2(cx)}" cy="${f2(cy)}" r="2.4" fill="${color}"/>`;
+}
+function rope(points, o = {}) {
+  const { color = COLOR_STRUCTURE, width = 1.8 } = o;
+  if (points.length < 2) return "";
+  const d = points.map(([x, y]) => `${f2(x)},${f2(y)}`).join(" ");
+  return `<polyline points="${d}" fill="none" stroke="${color}" ` +
+    `stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+function spring(x1, y1, x2, y2, o = {}) {
+  const { coils = 6, amp = 9.0, color = COLOR_STRUCTURE, lead = 0.15 } = o;
+  const L = Math.hypot(x2 - x1, y2 - y1);
+  if (L < 1e-6) return "";
+  const ux = (x2 - x1) / L, uy = (y2 - y1) / L, px = -uy, py = ux;
+  const leadLen = L * lead, coilLen = L - 2 * leadLen;
+  const pts = [[x1, y1]];
+  const a = [x1 + ux * leadLen, y1 + uy * leadLen]; pts.push(a);
+  const nn = coils * 2;
+  for (let i = 1; i < nn; i++) {
+    const t = i / nn, sideAmp = (i % 2 === 1) ? amp : -amp;
+    pts.push([a[0] + ux * coilLen * t + px * sideAmp,
+              a[1] + uy * coilLen * t + py * sideAmp]);
+  }
+  pts.push([x1 + ux * (leadLen + coilLen), y1 + uy * (leadLen + coilLen)]);
+  pts.push([x2, y2]);
+  const d = pts.map(([x, y]) => `${f2(x)},${f2(y)}`).join(" ");
+  return `<polyline points="${d}" fill="none" stroke="${color}" ` +
+    `stroke-width="${STROKE_STRUCTURE}" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+// ── 각도 호 ────────────────────────────────────────────────────────
+function angle_arc(cx, cy, r, start_deg, end_deg, label = null, color = COLOR_DIM) {
+  const s = start_deg * Math.PI / 180, e = end_deg * Math.PI / 180;
+  const x1 = cx + r * Math.cos(s), y1 = cy - r * Math.sin(s);
+  const x2 = cx + r * Math.cos(e), y2 = cy - r * Math.sin(e);
+  const sweep = end_deg - start_deg;
+  const large = Math.abs(sweep) > 180 ? 1 : 0;
+  const flag = sweep > 0 ? 0 : 1;
+  let out = `<path d="M ${f2(x1)} ${f2(y1)} A ${f2(r)} ${f2(r)} 0 ${large} ${flag} ` +
+    `${f2(x2)} ${f2(y2)}" fill="none" stroke="${color}" stroke-width="${STROKE_THIN}"/>`;
+  if (label) {
+    const mid = (start_deg + end_deg) / 2 * Math.PI / 180, lr = r + 13;
+    out += text(cx + lr * Math.cos(mid), cy - lr * Math.sin(mid), label,
+      { color, anchor: "middle", baseline: "central" });
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  components.py 포팅
+// ═══════════════════════════════════════════════════════════════════
+function incline_pulley(o = {}) {
+  const { angle = 30, m1_label = "m_1", m2_label = "m_2", friction = false,
+          show_decomp = false, tension_labels = ["T", "T"],
+          width = 560, height = 430 } = o;
+  const th = angle * Math.PI / 180, c = Math.cos(th), s = Math.sin(th);
+  const ax = 96.0, ay = height - 90.0, length = 300.0;
+  const [[Ax, Ay], [Bx, By]] = incline_apex(ax, ay, angle, length);
+  const u = [c, -s], n = [-s, -c];
+  const { defs, body: inclineBody } = incline(ax, ay, angle, length);
+
+  const r = 16.0, Px = Bx + 20.0, Py = By - 18.0;
+  const T1 = [Px + r * n[0], Py + r * n[1]], T2 = [Px + r, Py];
+  const post = rope([[Bx, By], [Px, Py]], { width: STROKE_STRUCTURE });
+  const pul = pulley(Px, Py, r);
+
+  const hl = 34.0, hh = 22.0, t1 = 0.42;
+  const spx = Ax + t1 * (Bx - Ax), spy = Ay + t1 * (By - Ay);
+  const c1 = [spx + n[0] * hh, spy + n[1] * hh];
+  const m1 = oriented_block(c1[0], c1[1], u[0], u[1], hl, hh, m1_label);
+  const attach1 = [c1[0] + hl * u[0], c1[1] + hl * u[1]];
+  const ropeIncline = rope([attach1, T1]);
+
+  const drop = 96.0, m2w = 56.0, m2h = 48.0;
+  const c2 = [T2[0], T2[1] + drop];
+  const m2 = block(c2[0], c2[1], m2w, m2h, m2_label);
+  const ropeHang = rope([T2, [c2[0], c2[1] - m2h / 2]]);
+
+  const arc = angle_arc(Ax, Ay, 46, 0, angle, "\\theta");
+
+  const Lg = 70.0, Lt = 66.0; let forces = "";
+  forces += vector(c1[0], c1[1], u[0] * Lt, u[1] * Lt, tension_labels[0],
+    { color: FORCE_PALETTE.tension });
+  const Ln = Lg * c;
+  forces += vector(c1[0], c1[1], n[0] * Ln, n[1] * Ln, "N", { color: FORCE_PALETTE.normal });
+  const gLabel = m1_label + " g";
+  if (show_decomp) {
+    const along = [-u[0] * Lg * s, -u[1] * Lg * s];
+    const perp = [-n[0] * Lg * c, -n[1] * Lg * c];
+    forces += vector(c1[0], c1[1], along[0], along[1], m1_label + " g sin\\theta",
+      { color: FORCE_PALETTE.gravity });
+    forces += vector(c1[0], c1[1], perp[0], perp[1], m1_label + " g cos\\theta",
+      { color: FORCE_PALETTE.gravity });
+    forces += vector(c1[0], c1[1], 0, Lg, gLabel, { color: FORCE_PALETTE.gravity, dash: "5,4" });
+    const gx = c1[0], gy = c1[1] + Lg;
+    forces += rope([[c1[0] + along[0], c1[1] + along[1]], [gx, gy],
+      [c1[0] + perp[0], c1[1] + perp[1]]], { color: "#bbbbbb", width: 1.0 });
+  } else {
+    forces += vector(c1[0], c1[1], 0, Lg, gLabel, { color: FORCE_PALETTE.gravity });
+  }
+  if (friction) {
+    const Lf = 50.0;
+    forces += vector(spx, spy, -u[0] * Lf, -u[1] * Lf, "f", { color: FORCE_PALETTE.friction });
+  }
+  forces += vector(c2[0], c2[1], 0, -Lt, tension_labels[1], { color: FORCE_PALETTE.tension });
+  forces += vector(c2[0], c2[1], 0, Lg, m2_label + " g", { color: FORCE_PALETTE.gravity });
+
+  const body = inclineBody + post + ropeIncline + ropeHang + pul + m1 + m2 + arc + forces;
+  return svg_document(width, height, body, { defs });
+}
+
+function free_body_diagram(forces, mass_label = "m", o = {}) {
+  const { width = 380, height = 380, box = true } = o;
+  const cx = width / 2, cy = height / 2;
+  const mags = forces.map((f) => f.mag ?? 1.0);
+  const mmax = mags.length ? Math.max(...mags) : 1.0;
+  const base = 96.0, lo = 52.0;
+  let body = box ? block(cx, cy, 66, 46, mass_label)
+    : `<circle cx="${cx}" cy="${cy}" r="4" fill="#111"/>` +
+      text(cx + 12, cy + 16, mass_label, { anchor: "start" });
+  for (const f of forces) {
+    const a = f.angle * Math.PI / 180, mag = f.mag ?? 1.0;
+    const L = lo + (base - lo) * (mmax ? mag / mmax : 1.0);
+    const color = f.color || FORCE_PALETTE[f.type || "default"] || FORCE_PALETTE.default;
+    body += vector(cx, cy, L * Math.cos(a), -L * Math.sin(a), f.label, { color });
+  }
+  return svg_document(width, height, body);
+}
+
+function pulley_simple(o = {}) {
+  const { m1_label = "m_1", m2_label = "m_2", show_tension = true,
+          show_gravity = true, width = 380, height = 420 } = o;
+  const cx = width / 2, ceilY = 46.0;
+  const { defs, body: ceil } = fixed_boundary([cx - 150, ceilY], [cx + 150, ceilY],
+    "ps_ceil", { side: -1 });
+  const r = 22.0, Px = cx, Py = ceilY + 44.0;
+  const post = rope([[Px, ceilY], [Px, Py - r]], { width: STROKE_STRUCTURE });
+  const pul = pulley(Px, Py, r);
+  const lx = Px - r, rx = Px + r, y1 = 300.0, y2 = 250.0, mw = 54.0, mh = 46.0;
+  const ropeL = rope([[lx, Py], [lx, y1 - mh / 2]]);
+  const ropeR = rope([[rx, Py], [rx, y2 - mh / 2]]);
+  const b1 = block(lx, y1, mw, mh, m1_label), b2 = block(rx, y2, mw, mh, m2_label);
+  let forces = ""; const Lt = 58.0, Lg = 64.0;
+  if (show_tension) {
+    forces += vector(lx, y1 - mh / 2, 0, -Lt, "T", { color: FORCE_PALETTE.tension });
+    forces += vector(rx, y2 - mh / 2, 0, -Lt, "T", { color: FORCE_PALETTE.tension });
+  }
+  if (show_gravity) {
+    forces += vector(lx, y1 + mh / 2, 0, Lg, m1_label + " g", { color: FORCE_PALETTE.gravity });
+    forces += vector(rx, y2 + mh / 2, 0, Lg, m2_label + " g", { color: FORCE_PALETTE.gravity });
+  }
+  const body = ceil + post + ropeL + ropeR + pul + b1 + b2 + forces;
+  return svg_document(width, height, body, { defs });
+}
+
+function spring_mass(o = {}) {
+  const { orientation = "horizontal", k_label = "k", m_label = "m",
+          show_forces = true } = o;
+  if (orientation === "horizontal") {
+    const width = 440, height = 320, floorY = height - 80.0, wallX = 60.0;
+    const mw = 70.0, mh = 60.0, cx = 300.0, cy = floorY - mh / 2;
+    const { defs: defsW, body: wall } = fixed_boundary([wallX, floorY - 150],
+      [wallX, floorY], "sm_wall", { side: 1 });
+    const { defs: defsF, body: floor } = fixed_boundary([wallX, floorY],
+      [width - 30, floorY], "sm_floor", { side: 1 });
+    const blk = block(cx, cy, mw, mh, m_label);
+    const sp = spring(wallX, cy, cx - mw / 2, cy, { coils: 7 });
+    const klabel = dim_label((wallX + cx - mw / 2) / 2, cy - 22, k_label);
+    let body = wall + floor + sp + blk + klabel;
+    if (show_forces) {
+      const Lg = 60.0;
+      body += vector(cx, cy, 66, 0, "F = -" + k_label + "x", { color: FORCE_PALETTE.applied });
+      body += vector(cx, cy + mh / 2, 0, Lg, m_label + " g", { color: FORCE_PALETTE.gravity });
+      body += vector(cx, cy - mh / 2, 0, -Lg, "N", { color: FORCE_PALETTE.normal });
+    }
+    return svg_document(width, height, body, { defs: defsW + defsF });
+  }
+  const width = 300, height = 400, cx = width / 2, ceilY = 46.0;
+  const { defs, body: ceil } = fixed_boundary([cx - 90, ceilY], [cx + 90, ceilY],
+    "sm_ceil", { side: -1 });
+  const mw = 74.0, mh = 62.0, spTop = ceilY, spBot = 210.0, cy = spBot + mh / 2;
+  const sp = spring(cx, spTop, cx, spBot, { coils: 8 });
+  const blk = block(cx, cy, mw, mh, m_label);
+  const klabel = dim_label(cx + 24, spTop + (spBot - spTop) * 0.30, k_label, { anchor: "start" });
+  let body = ceil + sp + blk + klabel;
+  if (show_forces) {
+    const Lg = 66.0;
+    body += vector(cx, cy + mh / 2, 0, Lg, m_label + " g", { color: FORCE_PALETTE.gravity });
+    body += vector(cx - 52, cy - mh / 2, 0, -Lg, "F = " + k_label + "x",
+      { color: FORCE_PALETTE.tension, label_anchor: "middle" });
+  }
+  return svg_document(width, height, body, { defs });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UI
+// ═══════════════════════════════════════════════════════════════════
+const COMPONENTS = {
+  incline_pulley: { label: "빗면+도르래" },
+  free_body_diagram: { label: "자유물체도" },
+  pulley_simple: { label: "단순 도르래" },
+  spring_mass: { label: "용수철-질량" },
+};
+let current = "incline_pulley";
+// free_body_diagram 힘 목록 상태
+let fbdForces = [
+  { label: "N", angle: 90, type: "normal", mag: 1.0 },
+  { label: "mg", angle: 270, type: "gravity", mag: 1.0 },
+  { label: "F", angle: 25, type: "applied", mag: 1.2 },
+  { label: "f", angle: 180, type: "friction", mag: 0.7 },
+];
+
+const $ = (id) => document.getElementById(id);
+const TYPE_OPTS = ["gravity", "normal", "tension", "friction", "applied", "default"];
+
+function seg() {
+  const el = $("componentSeg"); el.innerHTML = "";
+  for (const [key, { label }] of Object.entries(COMPONENTS)) {
+    const b = document.createElement("button");
+    b.textContent = label; b.className = key === current ? "active" : "";
+    b.onclick = () => { current = key; seg(); buildControls(); render(); };
+    el.appendChild(b);
+  }
+}
+
+function checkbox(id, label, checked) {
+  return `<div class="check"><input type="checkbox" id="${id}" ${checked ? "checked" : ""}>` +
+    `<label for="${id}">${label}</label></div>`;
+}
+function textField(id, label, value) {
+  return `<div class="field"><label for="${id}">${label}</label>` +
+    `<input type="text" id="${id}" value="${value}"></div>`;
+}
+
+function buildControls() {
+  const c = $("controls");
+  if (current === "incline_pulley") {
+    c.innerHTML =
+      `<div class="field"><label for="angle">경사각 θ (°)</label>
+        <div class="row"><input type="range" id="angle" min="5" max="75" value="30">
+        <span class="val" id="angleVal">30°</span></div></div>` +
+      textField("m1", "빗면 위 물체 라벨", "m_1") +
+      textField("m2", "매달린 물체 라벨", "m_2") +
+      textField("t1", "장력 라벨 (빗면쪽)", "T") +
+      textField("t2", "장력 라벨 (매달린쪽)", "T") +
+      checkbox("friction", "마찰력 표시", false) +
+      checkbox("decomp", "중력 성분분해 (sinθ·cosθ)", false);
+    $("angle").oninput = (e) => { $("angleVal").textContent = e.target.value + "°"; render(); };
+    ["m1", "m2", "t1", "t2"].forEach((id) => $(id).oninput = render);
+    ["friction", "decomp"].forEach((id) => $(id).onchange = render);
+  } else if (current === "free_body_diagram") {
+    c.innerHTML = textField("mass", "물체 라벨", "m") +
+      checkbox("box", "사각형 물체(끄면 점)", true) +
+      `<div class="field"><label>힘 목록 (각도: 0°=오른쪽, 90°=위)</label>
+        <table class="forces-table"><thead><tr><th>라벨</th><th>각°</th>
+        <th>종류</th><th>크기</th><th></th></tr></thead>
+        <tbody id="fbdBody"></tbody></table>
+        <button class="addbtn" id="addForce">+ 힘 추가</button></div>`;
+    $("mass").oninput = render; $("box").onchange = render;
+    $("addForce").onclick = () => {
+      fbdForces.push({ label: "F", angle: 0, type: "default", mag: 1.0 });
+      renderFbdRows(); render();
+    };
+    renderFbdRows();
+  } else if (current === "pulley_simple") {
+    c.innerHTML = textField("m1", "왼쪽 물체 라벨", "m_1") +
+      textField("m2", "오른쪽 물체 라벨", "m_2") +
+      checkbox("tension", "장력 표시", true) +
+      checkbox("gravity", "중력 표시", true);
+    ["m1", "m2"].forEach((id) => $(id).oninput = render);
+    ["tension", "gravity"].forEach((id) => $(id).onchange = render);
+  } else if (current === "spring_mass") {
+    c.innerHTML =
+      `<div class="field"><label for="orient">방향</label>
+        <select id="orient"><option value="horizontal">수평 (벽-바닥)</option>
+        <option value="vertical">수직 (천장)</option></select></div>` +
+      textField("k", "용수철 상수 라벨", "k") +
+      textField("mass", "물체 라벨", "m") +
+      checkbox("forces", "힘 표시", true);
+    $("orient").onchange = render; ["k", "mass"].forEach((id) => $(id).oninput = render);
+    $("forces").onchange = render;
+  }
+}
+
+function renderFbdRows() {
+  const tb = $("fbdBody"); tb.innerHTML = "";
+  fbdForces.forEach((f, i) => {
+    const tr = document.createElement("tr");
+    const opts = TYPE_OPTS.map((t) => `<option value="${t}" ${t === f.type ? "selected" : ""}>${t}</option>`).join("");
+    tr.innerHTML =
+      `<td><input type="text" value="${f.label}" data-i="${i}" data-k="label"></td>` +
+      `<td><input type="number" value="${f.angle}" data-i="${i}" data-k="angle" style="width:52px"></td>` +
+      `<td><select data-i="${i}" data-k="type">${opts}</select></td>` +
+      `<td><input type="number" step="0.1" value="${f.mag}" data-i="${i}" data-k="mag" style="width:52px"></td>` +
+      `<td><button class="del" data-i="${i}">×</button></td>`;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll("input,select").forEach((el) => {
+    el.oninput = el.onchange = (e) => {
+      const i = +e.target.dataset.i, k = e.target.dataset.k;
+      fbdForces[i][k] = (k === "angle" || k === "mag") ? +e.target.value : e.target.value;
+      render();
+    };
+  });
+  tb.querySelectorAll(".del").forEach((b) => b.onclick = (e) => {
+    fbdForces.splice(+e.target.dataset.i, 1); renderFbdRows(); render();
+  });
+}
+
+let currentSvg = "";
+function buildSvg() {
+  if (current === "incline_pulley") {
+    return incline_pulley({
+      angle: +$("angle").value, m1_label: $("m1").value, m2_label: $("m2").value,
+      tension_labels: [$("t1").value, $("t2").value],
+      friction: $("friction").checked, show_decomp: $("decomp").checked,
+    });
+  } else if (current === "free_body_diagram") {
+    return free_body_diagram(fbdForces, $("mass").value, { box: $("box").checked });
+  } else if (current === "pulley_simple") {
+    return pulley_simple({
+      m1_label: $("m1").value, m2_label: $("m2").value,
+      show_tension: $("tension").checked, show_gravity: $("gravity").checked,
+    });
+  } else if (current === "spring_mass") {
+    return spring_mass({
+      orientation: $("orient").value, k_label: $("k").value,
+      m_label: $("mass").value, show_forces: $("forces").checked,
+    });
+  }
+  return "";
+}
+function render() {
+  currentSvg = buildSvg();
+  $("preview").innerHTML = currentSvg;
+}
+
+// ── 다운로드 / 복사 ────────────────────────────────────────────────
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1600);
+}
+function download(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function fileId() { return ($("idInput").value || "diagram").trim() || "diagram"; }
+
+$("btnSvg").onclick = () => {
+  download(new Blob([currentSvg], { type: "image/svg+xml;charset=utf-8" }), fileId() + ".svg");
+  toast("SVG 저장됨");
+};
+$("btnCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText(currentSvg); toast("SVG 복사됨"); }
+  catch { toast("복사 실패 — 브라우저 권한 확인"); }
+};
+$("btnPng").onclick = () => {
+  const m = currentSvg.match(/width="(\d+)" height="(\d+)"/);
+  const w = m ? +m[1] : 560, h = m ? +m[2] : 430, scale = 2;
+  const img = new Image();
+  const blob = new Blob([currentSvg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  img.onload = () => {
+    const cv = document.createElement("canvas");
+    cv.width = w * scale; cv.height = h * scale;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    cv.toBlob((b) => { download(b, fileId() + ".png"); toast("PNG 저장됨 (2×)"); });
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast("PNG 변환 실패"); };
+  img.src = url;
+};
+
+// ── 시작 ───────────────────────────────────────────────────────────
+seg(); buildControls(); render();
+</script>
+</body>
+</html>

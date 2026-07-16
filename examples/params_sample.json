@@ -1,0 +1,6 @@
+{
+  "angle": 37,
+  "friction": true,
+  "show_decomp": true,
+  "tension_labels": ["T_1", "T_2"]
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>복원 · MAT-SEQ-0003</title>
+<!-- 수식은 MathJax(tex-svg)로 벡터(SVG) 렌더 — 확대해도 깨지지 않음.
+     로컬에서 열 때 인터넷 연결 필요(CDN). 오프라인/HWP 삽입용 임베드
+     SVG가 필요하면 mathjax-node로 자산화 가능. -->
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [["$", "$"]], displayMath: [["$$", "$$"]] },
+    svg: { fontCache: "global" },
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+  :root { --ink:#1a1c20; --muted:#6b7280; --line:#e5e7eb; --accent:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #f3f4f6; color: var(--ink);
+    font-family: "NanumGothic", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.75; padding: 32px 16px;
+  }
+  .sheet {
+    max-width: 760px; margin: 0 auto; background: #fff; padding: 40px 46px;
+    border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .qhead { display: flex; align-items: baseline; gap: 10px; }
+  .qno { font-size: 20px; font-weight: 700; }
+  .stem { font-size: 17px; flex: 1; }
+  .points { color: var(--muted); font-size: 14px; white-space: nowrap; }
+  .choices {
+    display: flex; flex-wrap: wrap; gap: 26px; margin: 20px 0 6px;
+    padding-left: 26px; font-size: 16px;
+  }
+  .divider { border: none; border-top: 1px solid var(--line); margin: 30px 0; }
+  .tag { font-size: 13px; font-weight: 700; color: var(--accent);
+    letter-spacing: .02em; }
+  .intent { background: #f8fafc; border-left: 3px solid var(--accent);
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin-top: 8px; }
+  .solution { margin-top: 8px; }
+  .solution .step { margin: 4px 0; }
+  .answer { margin-top: 26px; text-align: right; font-size: 17px; font-weight: 700; }
+  .answer .circle { color: var(--accent); }
+  @media print { body { background:#fff; padding:0; }
+    .sheet { border:none; box-shadow:none; } }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="qhead">
+      <span class="qno">3.</span>
+      <span class="stem">수열 $\{a_n\}$에 대하여 $\displaystyle\sum_{k=1}^{4}(2a_k-k)=0$일 때,
+        $\displaystyle\sum_{k=1}^{4}a_k$의 값은?</span>
+      <span class="points">[3점]</span>
+    </div>
+
+    <div class="choices">
+      <span>① 1</span><span>② 2</span><span>③ 3</span><span>④ 4</span><span>⑤ 5</span>
+    </div>
+
+    <hr class="divider">
+
+    <div class="tag">출제의도</div>
+    <div class="intent">시그마의 정의와 성질을 이용하여 수열의 합을 구할 수 있는가?</div>
+
+    <div class="tag" style="margin-top:26px;">정답풀이</div>
+    <div class="solution">
+      $$\begin{aligned}
+        \sum_{k=1}^{4}(2a_k-k)
+          &= 2\sum_{k=1}^{4}a_k-\sum_{k=1}^{4}k \\[2pt]
+          &= 2\sum_{k=1}^{4}a_k-\frac{4\times5}{2} \\[2pt]
+          &= 2\sum_{k=1}^{4}a_k-10 \\[2pt]
+          &= 0
+      \end{aligned}$$
+      <div class="step">에서 $\displaystyle 2\sum_{k=1}^{4}a_k=10$</div>
+      <div class="step">따라서 $\displaystyle\sum_{k=1}^{4}a_k=5$</div>
+    </div>
+
+    <div class="answer">정답 <span class="circle">⑤</span></div>
+  </div>
+</body>
+</html>
