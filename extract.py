@@ -27,9 +27,11 @@ SCHEMA = {
                      "description": "정답풀이 줄 목록. 각 줄 한글+수식($...$)"},
         "answer":   {"type": "string", "description": "정답 (예: '⑤', 없으면 빈 문자열)"},
         "has_figure": {"type": "boolean", "description": "그림(도형·그래프) 포함 여부"},
+        "figure_type": {"type": "string",
+                        "description": "그림 종류: none / cylinder / graph / plane / other"},
     },
     "required": ["qnum", "points", "stem", "choices", "intent",
-                 "solution", "answer", "has_figure"],
+                 "solution", "answer", "has_figure", "figure_type"],
 }
 
 PROMPT = (
@@ -40,6 +42,8 @@ PROMPT = (
     "- 선택지는 원문자 번호를 포함해 각각 하나의 문자열로.\n"
     "- 정답풀이는 수식 전개를 줄 단위로 나눠 배열에.\n"
     "- 그림(빗면·도르래·그래프·도형 등)이 있으면 has_figure=true.\n"
+    "- figure_type: 원기둥='cylinder', 함수그래프='graph', 평면도형='plane', "
+    "그림없음='none', 그 외='other'. 손글씨·낙서는 무시하고 인쇄된 문제만.\n"
     "- 확실하지 않은 항목은 비워 두세요(빈 문자열/빈 배열)."
 )
 
@@ -68,5 +72,66 @@ def extract(image_bytes: bytes, media_type: str = "image/jpeg") -> dict:
         ]}],
     )
     # 텍스트 블록을 이어붙여 JSON 파싱
+    text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
+    return json.loads(text)
+
+
+# ── 입체(공간도형) 파라미터 추출 — 현재 원기둥(cylinder) 지원 ──────
+SOLID_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "type": {"type": "string", "description": "입체 종류 (현재 'cylinder')"},
+        "points": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False,
+            "properties": {
+                "name": {"type": "string"},
+                "ring": {"type": "string", "description": "'top' 또는 'bottom'"},
+                "t": {"type": "number", "description": "타원 매개각(도)"},
+            },
+            "required": ["name", "ring", "t"]}},
+        "edges": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False,
+            "properties": {
+                "a": {"type": "string"}, "b": {"type": "string"},
+                "dashed": {"type": "boolean"},
+            },
+            "required": ["a", "b", "dashed"]}},
+        "ring_labels": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False,
+            "properties": {
+                "text": {"type": "string"},
+                "ring": {"type": "string"},
+                "t": {"type": "number"},
+            },
+            "required": ["text", "ring", "t"]}},
+    },
+    "required": ["type", "points", "edges", "ring_labels"],
+}
+
+SOLID_PROMPT = (
+    "이 원기둥 그림을 스키마대로 추출하세요.\n"
+    "- 원 위의 점: ring는 'top'(윗면)/'bottom'(밑면), t는 타원 매개각(도).\n"
+    "  t 규약: 90=앞 중앙(관찰자에 가까운 아래), 270=뒤 중앙(먼 위), "
+    "0=오른쪽, 180=왼쪽.\n"
+    "- edges: 점 사이 선분. 숨은선(점선)이면 dashed=true, 아니면 false.\n"
+    "- ring_labels: C_1(밑면)·C_2(윗면) 같은 원 이름 라벨.\n"
+    "- 손글씨·낙서는 무시하고 인쇄된 도형만."
+)
+
+
+def extract_solid(image_bytes: bytes, media_type: str = "image/jpeg") -> dict:
+    """원기둥 그림 → render_solid()가 받는 파라미터 dict."""
+    b64 = base64.b64encode(image_bytes).decode()
+    resp = _get_client().messages.create(
+        model=MODEL,
+        max_tokens=3000,
+        output_config={"format": {"type": "json_schema", "schema": SOLID_SCHEMA}},
+        messages=[{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64",
+                                         "media_type": media_type, "data": b64}},
+            {"type": "text", "text": SOLID_PROMPT},
+        ]}],
+    )
     text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
     return json.loads(text)
